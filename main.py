@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # BEÁLLÍTÁSOK
 # =======================
 
-TOKEN = "token ide"
+TOKEN = "MTQ2MDcyNjcxMDk0MDA3NDA5Ng.GYquR8.mOmAl0Vw12LE3muZvrLsXAMc2C-RtgNoP9XU8E"
 
 API_BASE = "https://pan-kruger-brooks-trigger.trycloudflare.com"
 
@@ -22,7 +22,7 @@ WATCH_STOPS = {
     "2902","1989"
 }
 
-TRAM_LINES = {"2","3","3F","4"}
+TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
 # =======================
 # DISCORD INIT
@@ -43,20 +43,34 @@ def ensure_dirs():
 def is_t6(reg):
     if not isinstance(reg, str):
         return False
+    if not reg.startswith("V"):
+        return False
     if not reg[1:].isdigit():
         return False
-    return 900 <= int(reg[1:]) <= 912
+    return 900 <= int(reg[1:]) <= 953 
 
-TATRA_B6 = {"950", "951", "952", "953"}
+TATRA_KT4 = {"200", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217"}
 
 def is_tatra(reg):
     if not isinstance(reg, str):
         return False
+    if not reg.startswith("V"):
+        return False
     if reg[1:].isdigit():
         n = int(reg[1:])
-        if 900 <= n <= 912:
+        if 200 <= n <= 912:
             return True
-    return reg in TATRA_B6
+    return reg in TATRA_KT4
+
+def is_pesa(reg):
+    if not isinstance(reg, str):
+        return False
+    if not reg.startswith("V"):
+        return False
+    if not reg[1:].isdigit():
+        return False
+    n = int(reg[1:])
+    return 100 <= n <= 107
 
 async def fetch_json(session, url):
     try:
@@ -165,8 +179,6 @@ async def allvillamos(ctx):
                 continue
 
             for dep in stop_data:
-                if not dep.get("realTime"):
-                    continue
                 line = str(dep.get("line"))
                 if line not in TRAM_LINES:
                     continue
@@ -192,7 +204,7 @@ async def allvillamos(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-async def allskoda(ctx):
+async def alltatra(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -201,8 +213,6 @@ async def allskoda(ctx):
                 continue
 
             for dep in stop_data:
-                if not dep.get("realTime"):
-                    continue
                 line = str(dep.get("line"))
                 if line not in TRAM_LINES:
                     continue
@@ -220,9 +230,43 @@ async def allskoda(ctx):
                     active[reg] = {"line": line, "dest": dest, "stop": stop_id, "dep": dep_time}
 
     if not active:
-        return await ctx.send("🚫 Nincs aktív Škoda troli.")
+        return await ctx.send("🚫 Nincs aktív Tatra villamos.")
 
-    embed = discord.Embed(title="🚎 Aktív Škoda trolibuszok", color=0xff0000)
+    embed = discord.Embed(title="🚎 Aktív Tatra villamosok", color=0xff0000)
+    for reg, i in active.items():
+        embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
+    await ctx.send(embed=embed)
+    
+@bot.command()
+async def allpesa(ctx):
+    active = {}
+    async with aiohttp.ClientSession() as session:
+        for stop_id in WATCH_STOPS:
+            stop_data = await fetch_json(session, STOP_API.format(stop_id=stop_id))
+            if not isinstance(stop_data, list):
+                continue
+
+            for dep in stop_data:
+                line = str(dep.get("line"))
+                if line not in TRAM_LINES:
+                    continue
+
+                dep_id = dep.get("id")
+                dep_time = dep.get("departure", 0)
+                dest = dep.get("dest", "Ismeretlen")
+
+                veh = await fetch_json(session, VEHICLE_API.format(route=line, dep_id=dep_id))
+                reg = get_last_vehicle_reg(veh)
+                if not reg or not is_pesa(reg):
+                    continue
+
+                if reg not in active or dep_time < active[reg]["dep"]:
+                    active[reg] = {"line": line, "dest": dest, "stop": stop_id, "dep": dep_time}
+
+    if not active:
+        return await ctx.send("🚫 Nincs aktív PESA villamos.")
+
+    embed = discord.Embed(title="🚋 Aktív PESA villamosok", color=0x0000ff)
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
@@ -375,6 +419,7 @@ async def vehicleinfo(ctx, vehicle: str):
 
     last = lines[-1]
     await ctx.send(f"🚍 **{vehicle} utolsó menete**\n```{last}```")
+    
 
 # =======================
 # START
