@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # BEÁLLÍTÁSOK
 # =======================
 
-TOKEN = "TOKEN"
+TOKEN = ""
 
 API_BASE = "https://pan-kruger-brooks-trigger.trycloudflare.com"
 
@@ -386,5 +386,6 @@ async def vehicleinfo(ctx, vehicle: str):
 async def on_ready():
     print(f"Bejelentkezve mint {bot.user}")
     logger_loop.start()
+
 
 bot.run(TOKEN)
