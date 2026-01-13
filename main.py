@@ -22,7 +22,7 @@ WATCH_STOPS = {
     "2902","1989"
 }
 
-TROLLEY_LINES = {"1E","5","6","8","9","10","19"}
+TRAM_LINES = {"2","3","3F","4"}
 
 # =======================
 # DISCORD INIT
@@ -40,25 +40,23 @@ def ensure_dirs():
     os.makedirs("logs", exist_ok=True)
     os.makedirs("logs/veh", exist_ok=True)
 
-def is_15tr(reg):
+def is_t6(reg):
     if not isinstance(reg, str):
-        return False
-    if not reg.startswith("T"):
         return False
     if not reg[1:].isdigit():
         return False
-    return 600 <= int(reg[1:]) <= 630
+    return 900 <= int(reg[1:]) <= 912
 
-SKODA_14TR = {"T706", "T709"}
+TATRA_B6 = {"950", "951", "952", "953"}
 
 def is_skoda(reg):
     if not isinstance(reg, str):
         return False
-    if reg.startswith("T") and reg[1:].isdigit():
+    if reg[1:].isdigit():
         n = int(reg[1:])
-        if 600 <= n <= 630:
+        if 900 <= n <= 912:
             return True
-    return reg in SKODA_14TR
+    return reg in TATRA_B6
 
 async def fetch_json(session, url):
     try:
@@ -387,6 +385,4 @@ async def on_ready():
     print(f"Bejelentkezve mint {bot.user}")
     logger_loop.start()
 
-
 bot.run(TOKEN)
-
