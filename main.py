@@ -49,7 +49,7 @@ def is_t6(reg):
 
 TATRA_B6 = {"950", "951", "952", "953"}
 
-def is_skoda(reg):
+def is_tatra(reg):
     if not isinstance(reg, str):
         return False
     if reg[1:].isdigit():
@@ -131,7 +131,7 @@ async def logger_loop():
 
             for dep in stop_data:
                 line = str(dep.get("line"))
-                if line not in TROLLEY_LINES:
+                if line not in TRAM_LINES:
                     continue
 
                 dep_id = dep.get("id")
@@ -156,7 +156,7 @@ async def logger_loop():
 # =======================
 
 @bot.command()
-async def alltroli(ctx):
+async def allvillamos(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -168,7 +168,7 @@ async def alltroli(ctx):
                 if not dep.get("realTime"):
                     continue
                 line = str(dep.get("line"))
-                if line not in TROLLEY_LINES:
+                if line not in TRAM_LINES:
                     continue
 
                 dep_id = dep.get("id")
@@ -184,9 +184,9 @@ async def alltroli(ctx):
                     active[reg] = {"line": line, "dest": dest, "stop": stop_id, "dep": dep_time}
 
     if not active:
-        return await ctx.send("🚫 Jelenleg nincs aktív troli.")
+        return await ctx.send("🚫 Jelenleg nincs aktív villamos.")
 
-    embed = discord.Embed(title="🚍 Aktív trolibuszok", color=0x00ff00)
+    embed = discord.Embed(title="🚍 Aktív villamosok", color=0x00ff00)
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
@@ -204,7 +204,7 @@ async def allskoda(ctx):
                 if not dep.get("realTime"):
                     continue
                 line = str(dep.get("line"))
-                if line not in TROLLEY_LINES:
+                if line not in TRAM_LINES:
                     continue
 
                 dep_id = dep.get("id")
@@ -213,7 +213,7 @@ async def allskoda(ctx):
 
                 veh = await fetch_json(session, VEHICLE_API.format(route=line, dep_id=dep_id))
                 reg = get_last_vehicle_reg(veh)
-                if not reg or not is_skoda(reg):
+                if not reg or not is_tatra(reg):
                     continue
 
                 if reg not in active or dep_time < active[reg]["dep"]:
@@ -340,7 +340,7 @@ async def allskodatoday(ctx, date: str = None):
         if not fname.endswith(".txt"):
             continue
         reg = fname.replace(".txt","")
-        if not is_15tr(reg):
+        if not is_t6(reg):
             continue
 
         with open(os.path.join(veh_dir, fname), "r", encoding="utf-8") as f:
@@ -352,9 +352,9 @@ async def allskodatoday(ctx, date: str = None):
                     skodas.setdefault(reg, []).append((ts, line_no, trip_id))
 
     if not skodas:
-        return await ctx.send(f"🚫 {day} napon nem közlekedett Škoda 15Tr.")
+        return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra T6.")
 
-    out = [f"🚎 *Škoda 15Tr – forgalomban ({day})*"]
+    out = [f"🚎 *Tatra T6 – forgalomban ({day})*"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
