@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # BEÁLLÍTÁSOK
 # =======================
 
-TOKEN = "MTQ2MDcyNjcxMDk0MDA3NDA5Ng.GYquR8.mOmAl0Vw12LE3muZvrLsXAMc2C-RtgNoP9XU8E"
+TOKEN = "Ide a tokent"
 
 API_BASE = "https://pan-kruger-brooks-trigger.trycloudflare.com"
 
@@ -431,3 +431,4 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+
