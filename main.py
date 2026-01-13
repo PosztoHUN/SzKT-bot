@@ -431,4 +431,6 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+client.login(process.env.TOKEN);
+
 
