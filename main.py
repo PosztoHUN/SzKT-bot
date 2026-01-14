@@ -535,9 +535,15 @@ async def vehicleinfo(ctx, vehicle: str):
 
 @bot.event
 async def on_ready():
+    if getattr(bot, "ready_done", False):
+        return
+    bot.ready_done = True
+
     print(f"Bejelentkezve mint {bot.user}")
     logger_loop.start()
 
+
 bot.run(TOKEN)
+
 
 
