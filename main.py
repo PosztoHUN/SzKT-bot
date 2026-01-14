@@ -539,11 +539,13 @@ async def on_ready():
         return
     bot.ready_done = True
 
+    ensure_dirs()        # könyvtárak létrehozása, ha kell
     print(f"Bejelentkezve mint {bot.user}")
-    logger_loop.start()
+    logger_loop.start()   # csak egyszer induljon el
 
 
 bot.run(TOKEN)
+
 
 
 
