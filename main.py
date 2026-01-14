@@ -683,8 +683,11 @@ async def vehicleinfo(ctx, vehicle: str):
 @bot.event
 async def on_ready():
     if getattr(bot, "ready_done", False):
-        return  # már lefutott
+        return
     bot.ready_done = True
+
+    # Győződjünk meg róla, hogy minden könyvtár létezik
+    ensure_dirs()
 
     print(f"Bejelentkezve mint {bot.user}")
     load_cache_txt()       # meglévő logok betöltése
@@ -693,6 +696,7 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
 
