@@ -682,15 +682,18 @@ async def vehicleinfo(ctx, vehicle: str):
 
 @bot.event
 async def on_ready():
-    global ready_printed
-    if not ready_printed:
-        ready_printed = True
-        print(f"Bejelentkezve mint {bot.user}")
-        load_cache_txt()
-        await update_cache()
-        refresh_loop.start()
+    if getattr(bot, "ready_done", False):
+        return  # már lefutott
+    bot.ready_done = True
+
+    print(f"Bejelentkezve mint {bot.user}")
+    load_cache_txt()       # meglévő logok betöltése
+    await update_cache()   # egyszeri frissítés induláskor
+    refresh_loop.start()   # 3 percenkénti frissítés
+
 
 bot.run(TOKEN)
+
 
 
 
