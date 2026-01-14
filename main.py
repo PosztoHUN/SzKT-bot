@@ -41,14 +41,6 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 # SEGÉDFÜGGVÉNYEK
 # =======================
 
-trip_cache = {}
-dep_id: -> {
-        "line": str,
-        "vehicle": str,
-        "dest": str,
-        "first_seen": str
-    }
-
 def load_cache():
     if not os.path.exists(CACHE_FILE):
         return
@@ -614,5 +606,6 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+
 
 
