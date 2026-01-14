@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import aiohttp
 import os
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta 
 
 # =======================
 # BEÁLLÍTÁSOK
@@ -14,15 +14,6 @@ API_BASE = "https://pan-kruger-brooks-trigger.trycloudflare.com"
 
 STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
 VEHICLE_API = f"{API_BASE}/vehicle?route={{route}}&id={{dep_id}}"
-trip_cache = {}  # dep_id -> {"line":..., "vehicle":..., "dest":..., "first_seen":...}
-
-LOG_DIR = os.getenv("LOG_DIR", "/data/logs")
-CACHE_FILE = os.path.join(LOG_DIR, "cache.txt")
-FLUSH_INTERVAL = 600  # 10 perc
-os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = "vehhist.txt"
-REFRESH_INTERVAL = 180  # 3 perc
-
 
 WATCH_STOPS = {
     "166","289","346","391","725","792","1008","1112","1247","1333",
@@ -44,144 +35,6 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 # =======================
 # SEGÉDFÜGGVÉNYEK
 # =======================
-from typing import Dict
-
-trip_cache: Dict[str, Dict[str, str]] = {}
-
-async def fetch_json(session, url):
-    try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
-            if r.status != 200:
-                return None
-            return await r.json()
-    except:
-        return None
-
-def save_cache_txt():
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        for dep_id, d in trip_cache.items():
-            f.write(f"{dep_id}|{d['line']}|{d['vehicle']}|{d['dest']}|{d['first_seen']}\n")
-
-def load_cache_txt():
-    if not os.path.exists(LOG_FILE):
-        return
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                dep_id, line_no, vehicle, dest, ts = line.strip().split("|")
-                trip_cache[dep_id] = {
-                    "line": line_no,
-                    "vehicle": vehicle,
-                    "dest": dest,
-                    "first_seen": ts
-                }
-            except:
-                continue
-
-async def update_cache():
-    async with aiohttp.ClientSession() as session:
-        for stop_id in WATCH_STOPS:
-            stop_data = await fetch_json(session, STOP_API.format(stop_id=stop_id))
-            if not isinstance(stop_data, list):
-                continue
-            for dep in stop_data:
-                dep_id = str(dep.get("id"))
-                line = str(dep.get("line"))
-                dest = dep.get("dest", "Ismeretlen")
-                if line not in TRAM_LINES or not dep_id:
-                    continue
-
-                veh = await fetch_json(session, VEHICLE_API.format(route=line, dep_id=dep_id))
-                if not veh or not isinstance(veh, list) or not veh:
-                    continue
-                vehicle = veh[-1].get("VehicleRegistrationNumber")
-                if not vehicle:
-                    continue
-
-                if dep_id not in trip_cache:
-                    trip_cache[dep_id] = {
-                        "line": line,
-                        "vehicle": vehicle,
-                        "dest": dest,
-                        "first_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    }
-    save_cache_txt()
-
-# --- AUTOMATIKUS FRISSÍTŐ LOOP ---
-@tasks.loop(seconds=REFRESH_INTERVAL)
-async def refresh_loop():
-    await update_cache()
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Cache frissítve.")
-
-# --- PARANCSOK TXT-HELYRŐL ---
-@bot.command(name="trip")
-async def vehhist(ctx, dep_id: str):
-    d = trip_cache.get(dep_id)
-    if not d:
-        return await ctx.send("❌ Nincs ilyen járat a cache-ben.")
-    await ctx.send(
-        f"📄 **{dep_id}**\n"
-        f"Vonal: {d['line']}\n"
-        f"Jármű: {d['vehicle']}\n"
-        f"Cél: {d['dest']}\n"
-        f"Első észlelés: {d['first_seen']}"
-    )
-
-def load_cache():
-    if not os.path.exists(CACHE_FILE):
-        return
-
-    with open(CACHE_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                dep_id, line_no, vehicle, dest, ts = line.strip().split("|")
-                trip_cache[dep_id] = {
-                    "line": line_no,
-                    "vehicle": vehicle,
-                    "dest": dest,
-                    "first_seen": ts
-                }
-            except:
-                continue
-
-def cache_trip(dep_id, line, vehicle, dest):
-    if dep_id not in trip_cache:
-        trip_cache[dep_id] = {
-            "line": line,
-            "vehicle": vehicle,
-            "dest": dest,
-            "first_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-
-@tasks.loop(seconds=FLUSH_INTERVAL)
-async def flush_cache():
-    tmp = CACHE_FILE + ".tmp"
-
-    with open(tmp, "w", encoding="utf-8") as f:
-        for dep_id, d in trip_cache.items():
-            f.write(
-                f"{dep_id}|{d['line']}|{d['vehicle']}|{d['dest']}|{d['first_seen']}\n"
-            )
-
-    os.replace(tmp, CACHE_FILE)
-
-
-@bot.command()
-async def cacheinfo(ctx, trip_id: str):
-    d = trip_cache.get(trip_id)
-    if not d:
-        return await ctx.send("❌ Nincs ilyen járat a cache-ben.")
-
-    await ctx.send(
-        f"📄 **{trip_id}**\n"
-        f"Vonal: {d['line']}\n"
-        f"Jármű: {d['vehicle']}\n"
-        f"Cél: {d['dest']}\n"
-        f"Első észlelés: {d['first_seen']}"
-    )
-
-
 
 def ensure_dirs():
     os.makedirs("logs", exist_ok=True)
@@ -682,14 +535,9 @@ async def vehicleinfo(ctx, vehicle: str):
 
 @bot.event
 async def on_ready():
-    if getattr(bot, "ready_done", False):
-        return
-    bot.ready_done = True
-
-    ensure_dirs()
     print(f"Bejelentkezve mint {bot.user}")
-    load_cache_txt()
-    await update_cache()
-    refresh_loop.start()
+    logger_loop.start()
 
 bot.run(TOKEN)
+
+
