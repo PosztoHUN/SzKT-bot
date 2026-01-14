@@ -115,7 +115,7 @@ async def refresh_loop():
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Cache frissítve.")
 
 # --- PARANCSOK TXT-HELYRŐL ---
-@bot.command()
+@bot.command(name="trip")
 async def vehhist(ctx, dep_id: str):
     d = trip_cache.get(dep_id)
     if not d:
