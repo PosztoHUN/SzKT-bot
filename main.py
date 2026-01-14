@@ -682,15 +682,16 @@ async def vehicleinfo(ctx, vehicle: str):
 
 @bot.event
 async def on_ready():
-    if not hasattr(bot, 'ready_done'):
-        bot.ready_done = True
+    global ready_printed
+    if not ready_printed:
+        ready_printed = True
         print(f"Bejelentkezve mint {bot.user}")
         load_cache_txt()
         await update_cache()
         refresh_loop.start()
 
-
 bot.run(TOKEN)
+
 
 
 
