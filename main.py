@@ -686,22 +686,10 @@ async def on_ready():
         return
     bot.ready_done = True
 
-    # Győződjünk meg róla, hogy minden könyvtár létezik
     ensure_dirs()
-
     print(f"Bejelentkezve mint {bot.user}")
-    load_cache_txt()       # meglévő logok betöltése
-    await update_cache()   # egyszeri frissítés induláskor
-    refresh_loop.start()   # 3 percenkénti frissítés
-
+    load_cache_txt()
+    await update_cache()
+    refresh_loop.start()
 
 bot.run(TOKEN)
-
-
-
-
-
-
-
-
-
