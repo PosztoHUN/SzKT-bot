@@ -2,13 +2,13 @@ import discord
 from discord.ext import commands, tasks
 import aiohttp
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta 
 
 # =======================
 # BEÁLLÍTÁSOK
 # =======================
 
-TOKEN = "Ide a tokent"
+TOKEN = "ide a token"
 
 API_BASE = "https://pan-kruger-brooks-trigger.trycloudflare.com"
 
@@ -49,7 +49,14 @@ def is_t6(reg):
         return False
     return 900 <= int(reg[1:]) <= 953 
 
-TATRA_KT4 = {"V200", "V201", "V202", "V203", "V204", "V205", "V206", "V207", "V208", "V209", "V210", "V211", "V212", "V213", "V214", "V215", "V216", "V217"}
+def is_kt4(reg):
+    if not isinstance(reg, str):
+        return False
+    if not reg.startswith("V"):
+        return False
+    if not reg[1:].isdigit():
+        return False
+    return 200 <= int(reg[1:]) <= 217 
 
 def is_tatra(reg):
     if not isinstance(reg, str):
@@ -58,9 +65,8 @@ def is_tatra(reg):
         return False
     if reg[1:].isdigit():
         n = int(reg[1:])
-        if 200 <= n <= 912:
+        if 200 <= n <= 953:
             return True
-    return reg in TATRA_KT4
 
 def is_pesa(reg):
     if not isinstance(reg, str):
@@ -198,7 +204,7 @@ async def allvillamos(ctx):
     if not active:
         return await ctx.send("🚫 Jelenleg nincs aktív villamos.")
 
-    embed = discord.Embed(title="🚍 Aktív villamosok", color=0x00ff00)
+    embed = discord.Embed(title="🚊 Aktív villamosok", color=0xffff00)
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
@@ -232,7 +238,7 @@ async def alltatra(ctx):
     if not active:
         return await ctx.send("🚫 Nincs aktív Tatra villamos.")
 
-    embed = discord.Embed(title="🚎 Aktív Tatra villamosok", color=0xff0000)
+    embed = discord.Embed(title="🚎 Aktív Tatra villamosok", color=0xffff00)
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
@@ -266,7 +272,7 @@ async def allpesa(ctx):
     if not active:
         return await ctx.send("🚫 Nincs aktív PESA villamos.")
 
-    embed = discord.Embed(title="🚋 Aktív PESA villamosok", color=0x0000ff)
+    embed = discord.Embed(title="🚋 Aktív PESA villamosok", color=0xffff00)
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
@@ -375,7 +381,7 @@ async def jaratinfo(ctx, trip_id: str, date: str = None):
         await ctx.send(msg[i:i+1900])
 
 @bot.command()
-async def allskodatoday(ctx, date: str = None):
+async def allt6today(ctx, date: str = None):
     day = resolve_date(date)
     veh_dir = "logs/veh"
     skodas = {}
@@ -398,7 +404,7 @@ async def allskodatoday(ctx, date: str = None):
     if not skodas:
         return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra T6.")
 
-    out = [f"🚎 *Tatra T6 – forgalomban ({day})*"]
+    out = [f"🚊 *Tatra T6 – forgalomban ({day})*"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
@@ -407,6 +413,108 @@ async def allskodatoday(ctx, date: str = None):
     msg = "\n".join(out)
     for i in range(0, len(msg), 1900):
         await ctx.send(msg[i:i+1900])
+
+@bot.command()
+async def allkt4today(ctx, date: str = None):
+    day = resolve_date(date)
+    veh_dir = "logs/veh"
+    skodas = {}
+
+    for fname in os.listdir(veh_dir):
+        if not fname.endswith(".txt"):
+            continue
+        reg = fname.replace(".txt","")
+        if not is_kt4(reg):
+            continue
+
+        with open(os.path.join(veh_dir, fname), "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith(day):
+                    ts = line.split(" - ")[0]
+                    trip_id = line.split("ID ")[1].split(" ")[0]
+                    line_no = line.split("Vonal ")[1].split(" ")[0]
+                    skodas.setdefault(reg, []).append((ts, line_no, trip_id))
+
+    if not skodas:
+        return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra KT4.")
+
+    out = [f"🚊 *Tatra KT4 – forgalomban ({day})*"]
+    for reg in sorted(skodas):
+        first = min(skodas[reg], key=lambda x: x[0])
+        last = max(skodas[reg], key=lambda x: x[0])
+        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+
+    msg = "\n".join(out)
+    for i in range(0, len(msg), 1900):
+        await ctx.send(msg[i:i+1900])
+
+@bot.command()
+async def allpesatoday(ctx, date: str = None):
+    day = resolve_date(date)
+    veh_dir = "logs/veh"
+    skodas = {}
+
+    for fname in os.listdir(veh_dir):
+        if not fname.endswith(".txt"):
+            continue
+        reg = fname.replace(".txt","")
+        if not is_pesa(reg):
+            continue
+
+        with open(os.path.join(veh_dir, fname), "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith(day):
+                    ts = line.split(" - ")[0]
+                    trip_id = line.split("ID ")[1].split(" ")[0]
+                    line_no = line.split("Vonal ")[1].split(" ")[0]
+                    skodas.setdefault(reg, []).append((ts, line_no, trip_id))
+
+    if not skodas:
+        return await ctx.send(f"🚫 {day} napon nem közlekedett Pesa.")
+
+    out = [f"🚊 *Pesa – forgalomban ({day})*"]
+    for reg in sorted(skodas):
+        first = min(skodas[reg], key=lambda x: x[0])
+        last = max(skodas[reg], key=lambda x: x[0])
+        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+
+    msg = "\n".join(out)
+    for i in range(0, len(msg), 1900):
+        await ctx.send(msg[i:i+1900])        
+
+@bot.command()
+async def alltatratoday(ctx, date: str = None):
+    day = resolve_date(date)
+    veh_dir = "logs/veh"
+    skodas = {}
+
+    for fname in os.listdir(veh_dir):
+        if not fname.endswith(".txt"):
+            continue
+        reg = fname.replace(".txt","")
+        if not is_t6(reg)  and not is_kt4(reg):
+            continue
+
+        with open(os.path.join(veh_dir, fname), "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith(day):
+                    ts = line.split(" - ")[0]
+                    trip_id = line.split("ID ")[1].split(" ")[0]
+                    line_no = line.split("Vonal ")[1].split(" ")[0]
+                    skodas.setdefault(reg, []).append((ts, line_no, trip_id))
+
+    if not skodas:
+        return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra.")
+
+    out = [f"🚊 *Tatra – forgalomban ({day})*"]
+    for reg in sorted(skodas):
+        first = min(skodas[reg], key=lambda x: x[0])
+        last = max(skodas[reg], key=lambda x: x[0])
+        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+
+    msg = "\n".join(out)
+    for i in range(0, len(msg), 1900):
+        await ctx.send(msg[i:i+1900])        
 
 @bot.command()
 async def vehicleinfo(ctx, vehicle: str):
@@ -418,7 +526,7 @@ async def vehicleinfo(ctx, vehicle: str):
         lines = [l.strip() for l in f if l.strip()]
 
     last = lines[-1]
-    await ctx.send(f"🚍 **{vehicle} utolsó menete**\n```{last}```")
+    await ctx.send(f"🚊 **{vehicle} utolsó menete**\n```{last}```")
     
 
 # =======================
@@ -431,7 +539,5 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
-client.login(process.env.TOKEN);
-
 
 
