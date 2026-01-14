@@ -16,7 +16,6 @@ STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
 VEHICLE_API = f"{API_BASE}/vehicle?route={{route}}&id={{dep_id}}"
 trip_cache = {}  # dep_id -> {"line":..., "vehicle":..., "dest":..., "first_seen":...}
 
-bot = commands.Bot(command_prefix=".", intents=discord.Intents.default())
 LOG_DIR = os.getenv("LOG_DIR", "/data/logs")
 CACHE_FILE = os.path.join(LOG_DIR, "cache.txt")
 FLUSH_INTERVAL = 600  # 10 perc
@@ -40,7 +39,7 @@ TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix=".", intents=intents)
+bot = commands.Bot(command_prefix=".", intents=discord.Intents.default())
 
 # =======================
 # SEGÉDFÜGGVÉNYEK
@@ -690,5 +689,6 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
