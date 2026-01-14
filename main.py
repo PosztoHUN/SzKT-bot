@@ -41,6 +41,10 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 # SEGÉDFÜGGVÉNYEK
 # =======================
 
+from typing import Dict
+
+trip_cache: Dict[str, Dict[str, str]] = {}
+
 def load_cache():
     if not os.path.exists(CACHE_FILE):
         return
@@ -606,6 +610,7 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+
 
 
 
