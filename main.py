@@ -49,7 +49,7 @@ def is_t6(reg):
         return False
     return 900 <= int(reg[1:]) <= 953 
 
-TATRA_KT4 = {"200", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217"}
+TATRA_KT4 = {"V200", "V201", "V202", "V203", "V204", "V205", "V206", "V207", "V208", "V209", "V210", "V211", "V212", "V213", "V214", "V215", "V216", "V217"}
 
 def is_tatra(reg):
     if not isinstance(reg, str):
@@ -432,5 +432,6 @@ async def on_ready():
 
 bot.run(TOKEN)
 client.login(process.env.TOKEN);
+
 
 
