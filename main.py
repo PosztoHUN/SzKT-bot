@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import aiohttp
 import os
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta  
 
 # =======================
 # BEÁLLÍTÁSOK
@@ -689,6 +689,7 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
 
