@@ -71,7 +71,6 @@ def cache_trip(dep_id, line, vehicle, dest):
             "first_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-cache_trip(dep_id, line, reg, dest)
 
 @tasks.loop(seconds=FLUSH_INTERVAL)
 async def flush_cache():
@@ -610,6 +609,7 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+
 
 
 
