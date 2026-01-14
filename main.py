@@ -39,7 +39,7 @@ TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix=".", intents=discord.Intents.default())
+bot = commands.Bot(command_prefix=".", intents=intents)
 
 # =======================
 # SEGÉDFÜGGVÉNYEK
@@ -689,6 +689,7 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
 
