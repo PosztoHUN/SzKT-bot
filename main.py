@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import aiohttp
 import os
 import sys
+import csv
 from datetime import datetime, timedelta 
 
 # =======================
@@ -26,6 +27,8 @@ WATCH_STOPS = {
 TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
 LOCK_FILE = "/tmp/discord_bot.lock"
+
+STOP_NAMES = {}
 
 if os.path.exists(LOCK_FILE):
     print("A bot már fut, kilépés.")
@@ -59,8 +62,7 @@ def is_nos(reg):
         n = int(reg[1:])
         if 12 <= n <= 12:
             return True
-    return reg in NOSZTALGIA
-    
+    return reg in NOSZTALGIA    
 
 def is_t6(reg):
     if not isinstance(reg, str):
@@ -99,6 +101,19 @@ def is_pesa(reg):
         return False
     n = int(reg[1:])
     return 100 <= n <= 107
+
+def load_stop_names(path="megallok_id_nev_idezojeles.csv"):
+    global STOP_NAMES
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) >= 2:
+                stop_id = row[0].strip()
+                stop_name = row[1].strip()
+                STOP_NAMES[stop_id] = stop_name
+
+def get_stop_name(stop_id):
+    return STOP_NAMES.get(str(stop_id), f"Ismeretlen megálló ({stop_id})")
 
 async def fetch_json(session, url):
     try:
@@ -596,6 +611,7 @@ async def on_ready():
     bot.ready_done = True
 
     ensure_dirs()        # könyvtárak létrehozása, ha kell
+    load_stop_names()
     print(f"Bejelentkezve mint {bot.user}")
     logger_loop.start()   # csak egyszer induljon el
 
