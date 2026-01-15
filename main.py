@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 TOKEN = os.getenv("TOKEN")
 
-API_BASE = "https://voluntary-showing-couple-physical.trycloudflare.com/"
+API_BASE = "https://voluntary-showing-couple-physical.trycloudflare.com"
 
 STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
 VEHICLE_API = f"{API_BASE}/vehicle?route={{route}}&id={{dep_id}}"
@@ -545,6 +545,7 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
 
