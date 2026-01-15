@@ -198,7 +198,7 @@ async def logger_loop():
 # =======================
 
 @bot.command()
-async def allvillamos(ctx):
+async def szktvillamos(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -232,7 +232,7 @@ async def allvillamos(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-async def alltatra(ctx):
+async def szkttatra(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -266,7 +266,7 @@ async def alltatra(ctx):
     await ctx.send(embed=embed)
     
 @bot.command()
-async def allpesa(ctx):
+async def szktpesa(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -300,7 +300,7 @@ async def allpesa(ctx):
     await ctx.send(embed=embed)
     
 @bot.command()
-async def allnosztalgia(ctx):
+async def szktnosztalgia(ctx):
     active = {}
     async with aiohttp.ClientSession() as session:
         for stop_id in WATCH_STOPS:
@@ -437,7 +437,7 @@ async def jaratinfo(ctx, trip_id: str, date: str = None):
         await ctx.send(msg[i:i+1900])
 
 @bot.command()
-async def allt6today(ctx, date: str = None):
+async def szktt6today(ctx, date: str = None):
     day = resolve_date(date)
     veh_dir = "logs/veh"
     skodas = {}
@@ -471,7 +471,7 @@ async def allt6today(ctx, date: str = None):
         await ctx.send(msg[i:i+1900])
 
 @bot.command()
-async def allkt4today(ctx, date: str = None):
+async def szktkt4today(ctx, date: str = None):
     day = resolve_date(date)
     veh_dir = "logs/veh"
     skodas = {}
@@ -505,7 +505,7 @@ async def allkt4today(ctx, date: str = None):
         await ctx.send(msg[i:i+1900])
 
 @bot.command()
-async def allpesatoday(ctx, date: str = None):
+async def szktpesatoday(ctx, date: str = None):
     day = resolve_date(date)
     veh_dir = "logs/veh"
     skodas = {}
@@ -539,7 +539,7 @@ async def allpesatoday(ctx, date: str = None):
         await ctx.send(msg[i:i+1900])        
 
 @bot.command()
-async def alltatratoday(ctx, date: str = None):
+async def szkttatratoday(ctx, date: str = None):
     day = resolve_date(date)
     veh_dir = "logs/veh"
     skodas = {}
@@ -601,3 +601,4 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
