@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import aiohttp
 import os
+import sys
 from datetime import datetime, timedelta 
 
 # =======================
@@ -24,6 +25,15 @@ WATCH_STOPS = {
 
 TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
+LOCK_FILE = "/tmp/discord_bot.lock"
+
+if os.path.exists(LOCK_FILE):
+    print("A bot már fut, kilépés.")
+    sys.exit(0)
+
+with open(LOCK_FILE, "w") as f:
+    f.write(str(os.getpid()))
+
 # =======================
 # DISCORD INIT
 # =======================
@@ -39,6 +49,18 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 def ensure_dirs():
     os.makedirs("logs", exist_ok=True)
     os.makedirs("logs/veh", exist_ok=True)
+    
+NOSZTALGIA = {"V313", "V314", "V313-V314", "V813"}
+
+def is_nos(reg):
+    if not isinstance(reg, str):
+        return False
+    if reg.startswith("V") and reg[1:].isdigit():
+        n = int(reg[1:])
+        if 12 <= n <= 12:
+            return True
+    return reg in NOSZTALGIA
+    
 
 def is_t6(reg):
     if not isinstance(reg, str):
@@ -276,6 +298,40 @@ async def allpesa(ctx):
     for reg, i in active.items():
         embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
     await ctx.send(embed=embed)
+    
+@bot.command()
+async def allnosztalgia(ctx):
+    active = {}
+    async with aiohttp.ClientSession() as session:
+        for stop_id in WATCH_STOPS:
+            stop_data = await fetch_json(session, STOP_API.format(stop_id=stop_id))
+            if not isinstance(stop_data, list):
+                continue
+
+            for dep in stop_data:
+                line = str(dep.get("line"))
+                if line not in TRAM_LINES:
+                    continue
+
+                dep_id = dep.get("id")
+                dep_time = dep.get("departure", 0)
+                dest = dep.get("dest", "Ismeretlen")
+
+                veh = await fetch_json(session, VEHICLE_API.format(route=line, dep_id=dep_id))
+                reg = get_last_vehicle_reg(veh)
+                if not reg or not is_nos(reg):
+                    continue
+
+                if reg not in active or dep_time < active[reg]["dep"]:
+                    active[reg] = {"line": line, "dest": dest, "stop": stop_id, "dep": dep_time}
+
+    if not active:
+        return await ctx.send("🚫 Ma nem közlekedik nosztalgia villamos. **Figyelem** a bot a __12__-es számú villamost nem látja, az lehet kint van.")
+
+    embed = discord.Embed(title="🚋 Aktív nosztalgia villamosok", color=0xffff00)
+    for reg, i in active.items():
+        embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def vehhist(ctx, vehicle: str, date: str = None):
@@ -333,12 +389,12 @@ async def vehhist(ctx, vehicle: str, date: str = None):
         runs.append(current)
 
     # --- KIÍRÁS (FÉLKÖVÉR!) ---
-    lines = [f"🚎 *{vehicle} – vehhist ({day})*"]
+    lines = [f"🚎 {vehicle} – vehhist ({day})"]
 
     for r in runs:
         lines.append(
-            f"*{r['start'].strftime('%H:%M')}* – "
-            f"*{r['line']} / {r['trip_id']}* – "
+            f"{r['start'].strftime('%H:%M')} – "
+            f"{r['line']} / {r['trip_id']} – "
             f"{r['dest']}"
         )
 
@@ -372,7 +428,7 @@ async def jaratinfo(ctx, trip_id: str, date: str = None):
     if not found:
         return await ctx.send(f"❌ Nincs adat erre a járatra ezen a napon ({day}).")
 
-    out = [f"📄 *Járat {trip_id} – {day}*"]
+    out = [f"📄 Járat {trip_id} – {day}"]
     for veh, l in found:
         out.append(f"{veh}: {l}")
 
@@ -404,11 +460,11 @@ async def allt6today(ctx, date: str = None):
     if not skodas:
         return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra T6.")
 
-    out = [f"🚊 *Tatra T6 – forgalomban ({day})*"]
+    out = [f"🚊 Tatra T6 – forgalomban ({day})"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
-        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+        out.append(f"{reg} — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
 
     msg = "\n".join(out)
     for i in range(0, len(msg), 1900):
@@ -438,11 +494,11 @@ async def allkt4today(ctx, date: str = None):
     if not skodas:
         return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra KT4.")
 
-    out = [f"🚊 *Tatra KT4 – forgalomban ({day})*"]
+    out = [f"🚊 Tatra KT4 – forgalomban ({day})"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
-        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+        out.append(f"{reg} — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
 
     msg = "\n".join(out)
     for i in range(0, len(msg), 1900):
@@ -472,11 +528,11 @@ async def allpesatoday(ctx, date: str = None):
     if not skodas:
         return await ctx.send(f"🚫 {day} napon nem közlekedett Pesa.")
 
-    out = [f"🚊 *Pesa – forgalomban ({day})*"]
+    out = [f"🚊 Pesa – forgalomban ({day})"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
-        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+        out.append(f"{reg} — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
 
     msg = "\n".join(out)
     for i in range(0, len(msg), 1900):
@@ -506,11 +562,11 @@ async def alltatratoday(ctx, date: str = None):
     if not skodas:
         return await ctx.send(f"🚫 {day} napon nem közlekedett Tatra.")
 
-    out = [f"🚊 *Tatra – forgalomban ({day})*"]
+    out = [f"🚊 Tatra – forgalomban ({day})"]
     for reg in sorted(skodas):
         first = min(skodas[reg], key=lambda x: x[0])
         last = max(skodas[reg], key=lambda x: x[0])
-        out.append(f"*{reg}* — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
+        out.append(f"{reg} — {first[0][11:16]} → {last[0][11:16]} (vonal {first[1]})")
 
     msg = "\n".join(out)
     for i in range(0, len(msg), 1900):
@@ -545,9 +601,3 @@ async def on_ready():
 
 
 bot.run(TOKEN)
-
-
-
-
-
-
