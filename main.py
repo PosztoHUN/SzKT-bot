@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 TOKEN = os.getenv("TOKEN")
 
-API_BASE = "https://szkt-trolleybus-realtime.hu/api/vehicles"
+VEHICLE_API = "https://szkt-trolleybus-realtime.hu/api/vehicles"
 
 # STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
 # VEHICLE_API = "http://127.0.0.1:8006/vehicles"
@@ -606,5 +606,6 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
 
