@@ -60,11 +60,24 @@ def is_pesa(reg):
 
 async def fetch_json(session, url):
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
+        async with session.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=aiohttp.ClientTimeout(total=5)
+        ) as r:
             if r.status != 200:
+                print("API STATUS:", r.status)
                 return None
-            return await r.json()
-    except:
+
+            js = await r.json()
+
+            # 🔥 EZ A LÉNYEG
+            if isinstance(js, dict) and "data" in js:
+                return js["data"]
+
+            return js
+    except Exception as e:
+        print("API HIBA:", e)
         return None
 
 def save_trip(dep_id, line, vehicle, stop):
@@ -250,3 +263,4 @@ async def on_ready():
     logger_loop.start()
 
 bot.run(TOKEN)
+
