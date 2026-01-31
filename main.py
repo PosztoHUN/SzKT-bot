@@ -13,15 +13,15 @@ TOKEN = os.getenv("TOKEN")
 
 API_BASE = "https://szkt-trolleybus-realtime.hu/api/vehicles"
 
-STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
-VEHICLE_API = "http://127.0.0.1:8006/vehicles"
+# STOP_API = f"{API_BASE}/stop?stopId={{stop_id}}"
+# VEHICLE_API = "http://127.0.0.1:8006/vehicles"
 
-WATCH_STOPS = {
-    "166","289","346","391","725","792","1008","1112","1247","1333",
-    "1346","1800","1935","1994","2185","2225","2228","2360","2391",
-    "2432","2502","2503","2544","2549","2587","2588","2900","2901",
-    "2902","1989"
-}
+# WATCH_STOPS = {
+#     "166","289","346","391","725","792","1008","1112","1247","1333",
+#     "1346","1800","1935","1994","2185","2225","2228","2360","2391",
+#     "2432","2502","2503","2544","2549","2587","2588","2900","2901",
+#     "2902","1989"
+# }
 
 TRAM_LINES = {"1", "1A", "1-2", "2","3", "X3", "3F","4", "X4"}
 
@@ -102,10 +102,21 @@ def is_pesa(reg):
 
 async def fetch_json(session, url):
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
+        async with session.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=aiohttp.ClientTimeout(total=5)
+        ) as r:
             if r.status != 200:
                 return None
-            return await r.json()
+
+            js = await r.json()
+
+            # 🔥 EZ HIÁNYZOTT
+            if isinstance(js, dict) and "data" in js:
+                return js["data"]
+
+            return js
     except:
         return None
 
@@ -166,32 +177,23 @@ def resolve_date(date_arg):
 @tasks.loop(seconds=30)
 async def logger_loop():
     async with aiohttp.ClientSession() as session:
-        for stop_id in WATCH_STOPS:
-            stop_data = await fetch_json(session, STOP_API.format(stop_id=stop_id))
-            if not isinstance(stop_data, list):
+        data = await fetch_json(session, API_BASE)
+        if not isinstance(data, list):
+            return
+
+        for v in data:
+            line = str(v.get("lineCode", "")).strip()
+            if line not in TRAM_LINES:
                 continue
 
-            for dep in stop_data:
-                line = str(dep.get("line"))
-                if line not in TRAM_LINES:
-                    continue
+            reg = v.get("VehicleRegistrationNumber")
+            if not reg:
+                continue
 
-                dep_id = dep.get("id")
-                if not dep_id:
-                    continue
+            dep_id = v.get("id")
+            stop = v.get("StopAreaName", "Ismeretlen")
 
-                dest = dep.get("dest", "Ismeretlen")
-
-                veh = await fetch_json(
-                    session,
-                    VEHICLE_API.format(route=line, dep_id=dep_id)
-                )
-
-                reg = get_last_vehicle_reg(veh)
-                if not reg:
-                    continue
-
-                save_trip(dep_id, line, reg, dest)
+            save_trip(dep_id, line, reg, stop)
 
 # =======================
 # PARANCSOK – MIND
@@ -200,35 +202,38 @@ async def logger_loop():
 @bot.command()
 async def szktvillamos(ctx):
     active = {}
+
     async with aiohttp.ClientSession() as session:
-        for stop_id in WATCH_STOPS:
-            stop_data = await fetch_json(session, STOP_API.format(stop_id=stop_id))
-            if not isinstance(stop_data, list):
+        data = await fetch_json(session, API_BASE)
+        if not isinstance(data, list):
+            return await ctx.send("❌ Nincs adat.")
+
+        for v in data:
+            line = str(v.get("lineCode", "")).strip()
+            if line not in TRAM_LINES:
                 continue
 
-            for dep in stop_data:
-                line = str(dep.get("line"))
-                if line not in TRAM_LINES:
-                    continue
+            reg = v.get("VehicleRegistrationNumber")
+            if not reg:
+                continue
 
-                dep_id = dep.get("id")
-                dep_time = dep.get("departure", 0)
-                dest = dep.get("dest", "Ismeretlen")
-
-                veh = await fetch_json(session, VEHICLE_API.format(route=line, dep_id=dep_id))
-                reg = get_last_vehicle_reg(veh)
-                if not reg:
-                    continue
-
-                if reg not in active or dep_time < active[reg]["dep"]:
-                    active[reg] = {"line": line, "dest": dest, "stop": stop_id, "dep": dep_time}
+            active[reg] = {
+                "line": line,
+                "stop": v.get("StopAreaName", "Ismeretlen"),
+                "delay": v.get("Delay", 0)
+            }
 
     if not active:
         return await ctx.send("🚫 Jelenleg nincs aktív villamos.")
 
     embed = discord.Embed(title="🚊 Aktív villamosok", color=0xffff00)
     for reg, i in active.items():
-        embed.add_field(name=reg, value=f"Vonal: {i['line']}\nCél: {i['dest']}\nMegálló: {i['stop']}", inline=False)
+        embed.add_field(
+            name=reg,
+            value=f"Vonal: {i['line']}\nMegálló: {i['stop']}\nKésés: {i['delay']} mp",
+            inline=False
+        )
+
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -601,4 +606,5 @@ async def on_ready():
 
 
 bot.run(TOKEN)
+
 
